@@ -1,453 +1,326 @@
+# RAG Evaluation Learning Lab
 
-# 🏋️ RAG Fitness Agent - Complete RAG System Tutorial
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/workflow-LangGraph-green.svg)](https://langchain-ai.github.io/langgraph/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![LangChain](https://img.shields.io/badge/LangChain-0.3-green.svg)](https://python.langchain.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+An inspectable learning project for adding evaluation to an existing fitness and nutrition RAG pipeline. It retrieves from local PDF embeddings, generates a source-constrained answer, evaluates retrieval and answer quality, and exposes the scores and bounded retry path to the learner.
 
-> **A production-ready Retrieval-Augmented Generation (RAG) system built for AI Builder Bootcamp students**
+This repository demonstrates evaluation techniques; it does not claim production accuracy or guarantee that every answer is free of hallucinations.
 
-Built by **Nisarg Kadam** | AI Trainer & Educator | [LinkedIn](https://linkedin.com/in/nisargkadam) | [YouTube](https://youtube.com/@cognithicai)
+## What this project teaches
 
----
+- How retrieval quality and answer quality fail independently.
+- How an LLM-as-a-judge can provide live quality signals when no labels exist.
+- How a labeled benchmark enables reproducible MRR, MAP, recall, ROUGE, and fuzzy scores.
+- How LangGraph can route low-quality results through one bounded retry.
+- Why evaluation scores, thresholds, costs, and limitations should be visible to users.
 
-## 🎯 What You'll Build
+The knowledge base remains the fitness and sports-nutrition collection from the original RAG project. FAISS stores embeddings produced locally with `all-MiniLM-L6-v2`; `gpt-4.1-mini` generates answers and performs live judging.
 
-A complete RAG system that answers questions from your own documents with:
+## Evaluated RAG flow
 
-- ✅ **4 Advanced Chunking Strategies** (Token-based, Semantic, Agentic, Recursive)
-- ✅ **Vector Database** (FAISS with local embeddings)
-- ✅ **LangGraph Workflow** (Single-agent state machine)
-- ✅ **Grounded Answers** (No hallucination - cites sources)
-- ✅ **Production-Ready** (Proper error handling, logging, configuration)
-
----
-
-## 🎬 Demo
-
-**Question:** "How much protein in 1 cup cottage cheese?"
-
-**Answer:**
-> "According to the provided information, 1 cup of 1% milkfat cottage cheese contains **28 grams of protein**."
-> 
-> 📄 *Source: Nutrition_Guide.pdf (Page 1)*
-
-**Question:** "How do I build a rocket ship?" *(Not in documents)*
-
-**Answer:**
-> "I don't have information about that in the provided documents."
-
----
-
-## 🏗️ Architecture
-```
-┌─────────────┐
-│   PDF Docs  │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐     ┌──────────────┐
-│  Text Chunking  │────▶│  Embeddings  │
-│  (4 strategies) │     │  (Local AI)  │
-└─────────────────┘     └──────┬───────┘
-                               │
-                               ▼
-                        ┌──────────────┐
-                        │    FAISS     │
-                        │ Vector Store │
-                        └──────┬───────┘
-                               │
-    ┌──────────────────────────┘
-    │
-    ▼
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  User Query  │────▶│   Retrieve   │────▶│   Generate   │
-└──────────────┘     │  (LangGraph) │     │  (GPT-3.5)   │
-                     └──────────────┘     └──────┬───────┘
-                                                 │
-                                                 ▼
-                                          ┌──────────────┐
-                                          │    Answer    │
-                                          │ with Sources │
-                                          └──────────────┘
+```text
+User question
+    |
+    v
+Retrieve ranked, unique source pages
+    |
+    v
+Search evaluator (LLM judge -> Python metrics)
+    | pass
+    |------------------------------.
+    | fail and retry available     |
+    v                              |
+Rewrite query -> retrieve once ----'
+    |
+    v
+Generate a source-constrained answer
+    |
+    v
+Answer evaluator (LLM judge -> Python metrics)
+    | pass
+    |------------------------------.
+    | fail and retry available     |
+    v                              |
+Stricter prompt -> generate once --'
+    |
+    v
+Answer + sources + scores + retry counts
 ```
 
----
+`config.yaml` limits the graph to one search retry and one answer retry. These bounds keep the control flow understandable and prevent an evaluator from creating an infinite or unexpectedly expensive loop.
 
-## 🚀 Quick Start (5 Minutes)
+## Two evaluation modes
+
+The application deliberately separates live estimates from labeled benchmark metrics.
+
+| Mode | Evidence available | Metrics shown |
+| --- | --- | --- |
+| Live chat | The question, retrieved text, and generated answer | Judged source grades, precision at k, reciprocal rank, NDCG at k, grounding/source usefulness, supported-claim percentage, hallucinated-claim percentage, and answer relevancy |
+| Labeled benchmark | A reference answer, expected source-page IDs, and an answerability label | MRR, MAP, precision, recall, F1, NDCG, ROUGE-1, ROUGE-2, ROUGE-L, fuzzy similarity, plus the live judge checks |
+
+Recall and MAP require a known set of relevant items. ROUGE and fuzzy matching require a reference answer. Those values therefore belong to the labeled benchmark and should be displayed as `N/A`, not zero, for an arbitrary live question.
+
+The live judge grades observations; deterministic Python functions perform the metric arithmetic. This makes the formulas independently testable and keeps model-generated math out of the scoring path.
+
+### Teaching thresholds from the supplied evaluation lesson
+
+These are the lesson's exact “good value” defaults, not fitness-domain guarantees. Calibrate them against a larger, human-reviewed dataset before using them as real quality gates.
+
+| Pillar | Metric | Range | Teaching target |
+| --- | --- | ---: | ---: |
+| Search | MRR / reciprocal rank | 0–1 | > 0.8 |
+| Search | MAP | 0–1 | > 0.7 |
+| Search | Precision | 0–1 | > 0.8 |
+| Search | Recall | 0–1 | > 0.7 |
+| Search | F1 | 0–1 | > 0.7 |
+| Search | NDCG | 0–1 | > 0.8 |
+| Answer | ROUGE-1 | 0–1 | > 0.5 |
+| Answer | ROUGE-2 | 0–1 | > 0.3 |
+| Answer | ROUGE-L | 0–1 | > 0.4 |
+| Answer | Fuzzy similarity | 0–100 | > 70 |
+| Answer judge | Grounding / useful sources | 0–100% | > 80% |
+| Answer judge | Supported claims (TP) | 0–100% | > 90% |
+| Answer judge | Hallucinated claims (FP) | 0–100% | < 10% |
+| Answer judge | Relevancy | 0 or 1 | = 1 |
+
+In live search evaluation, relevance is estimated only among retrieved results. That supports precision, first-relevant rank, and ranking-quality signals, but it cannot prove that every relevant item in the full database was found.
+
+## Cost and latency
+
+With evaluation enabled, a successful no-retry chat turn makes three LLM calls:
+
+1. Search judge.
+2. Answer generation.
+3. Answer judge.
+
+That is two additional LLM calls compared with answer generation alone. A search retry adds another search-judge call. An answer retry adds another generation and answer-judge call. The graph allows each retry at most once.
+
+Actual cost depends on source length, answer length, the configured judge model, and current provider pricing. Inspect your OpenAI usage rather than relying on a fixed per-query estimate.
+
+## Quick start
 
 ### Prerequisites
 
-- Python 3.10 or higher (tested on 3.13)
-- OpenAI API key ([Get one free](https://platform.openai.com/api-keys))
-- 1GB free disk space
+- Python 3.10 or newer.
+- An OpenAI API key.
+- Internet access on first use to download the local embedding model.
+- Text-extractable PDFs. Scanned documents require OCR before ingestion.
 
-### Installation
+### Install
+
 ```bash
-# 1. Clone the repository
-git clone https://github.com/NisargKadam/rag-fitness-agent.git
-cd rag-fitness-agent
+git clone https://github.com/NisargKadam/RAG_Evaluation.git
+cd RAG_Evaluation
 
-# 2. Create virtual environment
 python -m venv venv
-
-# 3. Activate virtual environment
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# Windows CMD:
-.\venv\Scripts\activate.bat
-# Mac/Linux:
 source venv/bin/activate
-
-# 4. Install dependencies
 pip install -r requirements.txt
 ```
 
-> ⚠️ **Important:** Steps 2–3 are NOT optional. Always install into a **brand-new virtual environment** — never into system Python, the conda `base` environment, or a venv you used for another project. This project pins LangChain 0.3.x; if your environment already has newer LangChain packages installed, pip will report dependency conflicts (see [Troubleshooting](#%EF%B8%8F-troubleshooting)). Make sure your prompt shows `(venv)` before running `pip install`.
+Windows PowerShell activation:
 
-### Configuration
+```powershell
+.\venv\Scripts\Activate.ps1
+```
 
-1. Copy `.env.example` to `.env`:
+Use a fresh virtual environment because this project pins LangChain 0.3.x packages.
+
+### Configure
+
 ```bash
 cp .env.example .env
 ```
 
-2. Edit `.env` and add your OpenAI API key:
-```
-OPENAI_API_KEY=sk-your-actual-key-here
+Open `.env` and replace the placeholder:
+
+```dotenv
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
-### Run the System
+The real `.env` is ignored by Git. Never commit an API key.
+
+### Ingest the PDFs
+
+Place PDF files in `data/pdfs/`, then build the FAISS index:
+
 ```bash
-# Step 1: Add your PDF files to data/pdfs/ folder
-
-# Step 2: Ingest documents (choose chunking strategy)
-python app/ingest.py semantic
-
-# Step 3: Ask questions interactively
-python -m app.main
-```
-
----
-
-## 📚 Chunking Strategies Explained
-
-| Strategy | Command | Best For | Chunks Created* | Speed |
-|----------|---------|----------|-----------------|-------|
-| **Token-based** | `python app/ingest.py token_based` | Precise token control, preventing LLM overflow | 62 | ⚡ Fast |
-| **Semantic** | `python app/ingest.py semantic` | General Q&A, natural language | 106 | ⚡ Fast |
-| **Agentic** | `python app/ingest.py agentic` | Highest quality, complex documents | 114 | 🐌 Slow† |
-| **Recursive** | `python app/ingest.py recursive` | Structured/hierarchical documents | 106 | ⚡ Fast |
-
-*Based on 57 pages of sample documents  
-†Uses LLM for intelligent chunking (~$0.01 per 10 pages)
-
-### Try Different Strategies
-```bash
-# Token-based: Best for strict context control
-python app/ingest.py token_based
-python -m app.main
-
-# Semantic: Recommended default
-python app/ingest.py semantic
-python -m app.main
-
-# Agentic: Best quality (uses API credits)
-python app/ingest.py agentic
-python -m app.main
-
-# Recursive: Best for markdown/code
 python app/ingest.py recursive
-python -m app.main
 ```
 
----
+Re-run ingestion after changing documents, embeddings, or chunking. Ingestion now adds stable `document_id` and `chunk_id` metadata used by the benchmark.
 
-## 🎓 Learning Objectives
+Available learning strategies are:
 
-After completing this project, you will understand:
-
-### Core Concepts
-- ✅ **RAG Architecture**: How retrieval improves LLM accuracy
-- ✅ **Embeddings**: Semantic search with vector databases
-- ✅ **LangGraph**: State machines for LLM workflows
-- ✅ **Chunking Strategies**: Document splitting optimization
-- ✅ **Grounding**: Preventing hallucination
-
-### Technical Skills
-- ✅ LangChain framework
-- ✅ FAISS vector database
-- ✅ OpenAI API integration
-- ✅ Python async/await patterns
-- ✅ Production-ready error handling
-
----
-
-## 📁 Project Structure
-```
-rag_fitness_agent/
-├── app/
-│   ├── __init__.py
-│   ├── ingest.py              # Document ingestion pipeline
-│   ├── agent.py               # RAG agent logic
-│   ├── graph.py               # LangGraph state definition
-│   ├── main.py                # Interactive CLI
-│   └── chunking_strategies.py # 4 chunking implementations
-├── data/
-│   └── pdfs/                  # 📥 Put your PDF files here
-├── vectorstore/               # FAISS storage (auto-generated)
-├── config.yaml                # Configuration settings
-├── requirements.txt           # Python dependencies
-├── .env.example               # Environment variables template
-└── README.md                  # This file
+```bash
+python app/ingest.py token_based
+python app/ingest.py semantic
+python app/ingest.py agentic
+python app/ingest.py recursive
 ```
 
----
+Agentic chunking uses the OpenAI API; the other listed strategies split locally.
 
-## 🧪 Example Usage
+### Open the evaluated chat UI
 
-### Interactive Mode
+```bash
+streamlit run streamlit_app.py
+```
+
+The Streamlit response includes the answer, source pages, quality status, live search and answer metrics, and whether either bounded retry ran. Detailed score explanations are kept collapsible so the answer remains easy to read.
+
+For the terminal chat:
+
 ```bash
 python -m app.main
 ```
-```
-❓ Your question: How much protein in cottage cheese?
 
-💡 Answer:
-1 cup of 1% milkfat cottage cheese contains 28 grams of protein.
+## Run the labeled benchmark
 
-📚 Sources:
-📄 Nutrition_Guide.pdf (pages: 1, 4, 6)
-```
+The benchmark dataset stores 12 manually checked questions, reference answers, expected source-page identifiers, and whether each question is answerable from the knowledge base. Ten are answerable and two are deliberate hard negatives.
 
-### Testing Grounding
 ```bash
-❓ Your question: What is quantum physics?
-
-💡 Answer:
-I don't have information about that in the provided documents.
+python run_evaluation.py
 ```
 
-✅ **The system correctly refuses to answer questions outside its knowledge base!**
+Use benchmark results to compare retrieval or prompting changes. Keep the dataset fixed during a comparison, and review labels manually when a score is surprising.
 
----
+See [EVALUATION_GUIDE.md](EVALUATION_GUIDE.md) for the ground-truth page convention, benchmark inventory, formulas, and evaluator caveats.
 
-## ⚙️ Configuration
+## Run the tests
 
-Edit `config.yaml` to customize:
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests should remain deterministic: metric arithmetic and graph routing can be checked with fixed observations or mocked judges instead of spending API credits.
+
+## What the UI scores mean
+
+- **Precision at k:** fraction of retrieved pages the live judge marked relevant.
+- **Reciprocal rank:** how early the first judged-relevant page appeared.
+- **NDCG at k:** whether the strongest evidence was ranked near the top.
+- **Grounding:** percentage of retrieved sources judged useful for supporting the answer.
+- **Supported claims:** percentage of answer claims supported by at least one source.
+- **Hallucinated claims:** percentage of answer claims not supported by the supplied sources.
+- **Relevancy:** whether the answer is direct when evidence exists, or correctly abstains when it does not.
+
+Source-page IDs are de-duplicated before live evaluation. Several chunks from one page should not masquerade as several independent relevant documents.
+
+## Configuration
+
+The main controls live in `config.yaml`:
+
 ```yaml
-# Document chunking
-chunking:
-  chunk_size: 1000      # Characters per chunk
-  chunk_overlap: 200    # Overlap between chunks
-
-# Vector database
-vectordb:
-  collection_name: "fitness_docs"
-  persist_directory: "./vectorstore"
-
-# Retrieval
 retrieval:
-  top_k: 3              # Number of chunks to retrieve
+  top_k: 3
+  candidate_multiplier: 3
 
-# LLM settings
-llm:
-  model: "gpt-3.5-turbo"
-  temperature: 0.0      # 0 = deterministic, 1 = creative
+evaluation:
+  enabled: true
+  judge_model: "gpt-4.1-mini"
+  max_search_retries: 1
+  max_answer_retries: 1
+  benchmark_file: "data/evaluation_questions.json"
+  thresholds:
+    precision_at_k: 0.8
+    reciprocal_rank: 0.8
+    ndcg_at_k: 0.8
+    grounding_percent: 80
+    supported_claims_percent: 90
+    hallucinated_claims_percent: 10
+    relevancy: 1
 ```
 
----
+FAISS returns a distance where lower is better. A raw distance is not a confidence percentage, so the evaluated retriever does not present it as one. Tune retrieval settings with the labeled benchmark instead of copying an arbitrary similarity cutoff.
 
-## 🔬 Advanced Features
+## Project structure
 
-### 1. Compare Chunking Strategies
+```text
+RAG_Evaluation/
+├── app/
+│   ├── agent.py                 # Evaluated LangGraph workflow
+│   ├── graph.py                 # Shared graph state
+│   ├── judge.py                 # Structured live LLM-judge prompts
+│   ├── evaluation.py            # Deterministic metric functions
+│   ├── benchmarks.py            # Dataset loading and page-ID matching
+│   ├── ingest.py                # PDF ingestion and stable IDs
+│   ├── chunking_strategies.py   # Four learning strategies
+│   └── main.py                  # Terminal chat
+├── data/
+│   ├── pdfs/                    # Fitness and nutrition sources
+│   └── evaluation_questions.json
+├── tests/                       # Unit and workflow tests
+├── run_evaluation.py            # Labeled benchmark runner
+├── streamlit_app.py             # Evaluated chat UI
+├── EVALUATION_GUIDE.md           # Metrics and benchmark notes
+├── config.yaml
+├── requirements.txt
+└── .env.example
+```
+
+`vectorstore/` is generated locally and ignored by Git.
+
+## Limitations
+
+- The included benchmark is intentionally small and educational; its scores do not establish production accuracy.
+- LLM judges can be inconsistent or wrong. Temperature zero reduces variation but does not remove it.
+- A judge and generator from the same model family may share blind spots.
+- Live MRR-like and NDCG signals use judge-assigned relevance within the retrieved set; full recall and MAP need labels.
+- ROUGE and fuzzy matching reward surface overlap and may under-score valid paraphrases or miss a changed number.
+- A high evaluation score is evidence, not proof, that an answer is correct.
+- Evaluation adds latency and API cost, especially when retries run.
+- The ingestion pipeline extracts text but does not OCR scanned pages.
+- Thresholds copied from the lesson are teaching defaults and are not calibrated to this fitness corpus.
+
+## Troubleshooting
+
+### `OPENAI_API_KEY is not set`
+
+Copy `.env.example` to `.env`, add the key, and restart Streamlit. Do not add quotes or commit the real file.
+
+### The FAISS index is missing, stale, or has no stable IDs
+
+Rebuild it:
+
 ```bash
-python compare_all_chunking.py
+python app/ingest.py recursive
 ```
 
-Shows side-by-side comparison of all 4 strategies.
+Both `vectorstore/index.faiss` and `vectorstore/index.pkl` are required.
 
-### 2. Inspect Vector Database
+### The embedding model repeatedly tries to contact Hugging Face
+
+The first run must download `all-MiniLM-L6-v2`. After it is cached, offline environments can set:
+
 ```bash
-python inspect_vectordb.py
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
 ```
 
-View:
-- Total vectors stored
-- Sample documents
-- Source distribution
-- Collection statistics
+### The judge is unavailable
 
-### 3. Test Similarity Scores
+Check the API key, provider connectivity, rate limits, and model access. The application may still return an answer, but unavailable evaluations must be treated as missing—not passing scores.
+
+### A scanned PDF contributes no chunks
+
+Run OCR on the PDF, replace it with a text-extractable version, and ingest again.
+
+### LangChain dependency conflicts
+
+Create a brand-new virtual environment and install only `requirements.txt`. Reusing a system, Conda base, or unrelated environment commonly leaves incompatible LangChain 1.x packages installed beside this project's pinned 0.3.x packages.
+
+### `No module named app`
+
+Run commands from the repository root. Use module mode for the terminal chat:
+
 ```bash
-python check_similarity.py
-```
-
-See which chunks are most similar to your query.
-
----
-
-## 🎯 Use Cases
-
-Adapt this RAG system for:
-
-| Domain | Example Documents | Sample Questions |
-|--------|-------------------|------------------|
-| **Education** | Textbooks, lecture notes | "Explain photosynthesis" |
-| **Healthcare** | Medical guidelines | "What are diabetes symptoms?" |
-| **Legal** | Contracts, regulations | "What are tenant rights?" |
-| **Corporate** | Policies, reports | "What's our vacation policy?" |
-| **Research** | Papers, articles | "Summarize recent AI trends" |
-
----
-
-## 🛠️ Troubleshooting
-
-### Issue: pip reports dependency conflicts (langchain-core / langgraph-prebuilt / langchain-classic)
-Example:
-```
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed.
-langgraph-prebuilt X.Y.Z requires langchain-core>=1.3.1, but you have langchain-core 0.3.28 which is incompatible.
-langchain-classic X.Y.Z requires langchain-core<2.0.0,>=1.4.4, but you have langchain-core 0.3.28 ...
-```
-**Cause:** You are installing into an environment that already contains newer LangChain 1.x packages (e.g. you ran `pip install langchain` before, or you're in system Python / conda base). Packages like `langgraph-prebuilt` and `langchain-classic` are **not** used by this project — they are leftovers from a previous install.
-
-**Solution:** Install into a fresh virtual environment:
-```bash
-# From the project folder — deactivate and delete any old venv first
-deactivate  # (ignore errors if not activated)
-rm -rf venv                      # Mac/Linux
-# rmdir /s /q venv               # Windows CMD
-
-python -m venv venv
-source venv/bin/activate         # Mac/Linux
-# .\venv\Scripts\Activate.ps1    # Windows PowerShell
-pip install -r requirements.txt
-```
-Verify your prompt shows `(venv)` before running `pip install`.
-
-### Issue: "No module named 'app'"
-**Solution:**
-```bash
-# Use module mode
 python -m app.main
 ```
 
-### Issue: "OPENAI_API_KEY not found"
-**Solution:**
-1. Copy `.env.example` to `.env`
-2. Add your API key to `.env`
+## License and attribution
 
-### Issue: "No PDF files found"
-**Solution:**
-Add PDFs to `data/pdfs/` folder
+The code is available under the [MIT License](LICENSE). The evaluation thresholds and teaching structure are adapted from the supplied “RAG Evaluation: Search Evaluator & Answer Evaluator” lesson.
 
-### Issue: PDF has no text (scanned image)
-**Solution:**
-- Use OCR-enabled PDFs
-- Or add OCR support (see advanced tutorials)
-
----
-
-## 📊 Performance Metrics
-
-| Metric | Value |
-|--------|-------|
-| **Ingestion Time** | ~30 seconds (50 pages) |
-| **Query Time** | ~2-3 seconds |
-| **Embedding Model Size** | 80MB (local) |
-| **Cost per Query** | ~$0.001 (OpenAI API) |
-| **Accuracy** | 100% grounded (no hallucination) |
-
----
-
-## 🚀 Next Steps
-
-### For Beginners
-1. Complete [STUDENT_GUIDE.md](STUDENT_GUIDE.md) assignments
-2. Test with your own documents
-3. Try all 4 chunking strategies
-
-### For Intermediate Users
-1. Switch to [Ollama](https://ollama.ai) (100% local, no API costs)
-2. Add web interface (Streamlit/FastAPI)
-3. Implement query history
-
-### For Advanced Users
-1. Deploy to Azure/AWS
-2. Add multi-modal support (images + text)
-3. Build multi-agent workflows
-4. Create evaluation framework
-
----
-
-## 📚 Resources
-
-- [LangChain Documentation](https://python.langchain.com/)
-- [LangGraph Tutorial](https://langchain-ai.github.io/langgraph/)
-- [FAISS Documentation](https://faiss.ai/)
-- [RAG Best Practices](https://www.pinecone.io/learn/retrieval-augmented-generation/)
-- [My YouTube Channel](https://youtube.com/@cognithicai) - RAG tutorials
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💼 About the Author
-
-**Nisarg Kadam**  
-Lead Agentic AI Architect | AI Trainer & Educator
-
-- 🏆 4x Global Hackathon Champion
-- 🎓 AI Builder Bootcamp Instructor
-- 🎤 International AI Keynote Speaker
-- 💼 Enterprise AI Architect (UBS, GSDC)
-
-### Connect With Me
-- 🔗 [LinkedIn](https://linkedin.com/in/nisargkadam)
-- 🎥 [YouTube - Cognithic AI Labs](https://youtube.com/@cognithicai)
-- 🌐 [GitHub](https://github.com/NisargKadam)
-
----
-
-## 🙏 Acknowledgments
-
-- Built for **AI Builder Bootcamp** students
-- Powered by [LangChain](https://langchain.com/) and [OpenAI](https://openai.com/)
-- Inspired by real-world enterprise RAG implementations
-
----
-
-## 📞 Support
-
-- 📧 Issues: [GitHub Issues](https://github.com/NisargKadam/rag-fitness-agent/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/NisargKadam/rag-fitness-agent/discussions)
-- 📺 Video tutorials: [YouTube Playlist](https://youtube.com/@cognithicai)
-
----
-
-## ⭐ Star This Repo
-
-If this project helped you learn RAG systems, please ⭐ star the repository!
-
----
-
-**Happy Learning! 🚀**
-
-*Built with ❤️ for the AI community*
+Built by **Nisarg Kadam** for hands-on AI learning.

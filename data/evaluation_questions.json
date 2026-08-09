@@ -1,0 +1,136 @@
+[
+  {
+    "id": "fitness_001",
+    "question": "What daily carbohydrate intake does the pre- and post-exercise nutrition guide recommend, and when should carbohydrates be eaten before a long workout?",
+    "reference_answer": "The guide recommends 5 to 12 grams of carbohydrate per kilogram of body weight per day, depending on activity level. If exercise will last 60 minutes or longer, it recommends consuming carbohydrates one hour before exercise.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "exercise-nutrition.pdf",
+        "page": 4
+      }
+    ]
+  },
+  {
+    "id": "fitness_002",
+    "question": "How much protein does the pre- and post-exercise nutrition guide recommend for active people, and how should it be distributed around exercise?",
+    "reference_answer": "Depending on activity level, the guide recommends 1.2 to 2 grams of protein per kilogram of body weight per day. It suggests 20 to 40 grams, or 0.25 to 0.4 grams per kilogram, every three to four hours and a high-protein meal or snack immediately after exercise or within two hours.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "exercise-nutrition.pdf",
+        "page": 5
+      }
+    ]
+  },
+  {
+    "id": "fitness_003",
+    "question": "What hydration signs and actions does the pre- and post-exercise nutrition guide recommend?",
+    "reference_answer": "Clear or pale yellow urine is presented as a sign of good hydration. The guide recommends drinking water with every meal, drinking about 16 ounces or 2 cups two hours before exercise, and drinking water during and after exercise.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "exercise-nutrition.pdf",
+        "page": 5
+      }
+    ]
+  },
+  {
+    "id": "fitness_004",
+    "question": "What practical meal habits does the high-calorie, high-protein education sheet suggest for increasing calorie and protein intake?",
+    "reference_answer": "It suggests eating five to six small meals per day, drinking liquids between rather than with meals, eating larger portions of fish, poultry, eggs, milk, yogurt, cheese, and beans, and preparing canned soup with milk instead of water. It also says that a dietitian should determine individual extra calorie and protein needs.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Nutrition, High Cal-Pro_Education_sheet.pdf",
+        "page": 1
+      }
+    ]
+  },
+  {
+    "id": "fitness_005",
+    "question": "What goes into the education sheet's Peanut Butter Banana Smoothie, and what nutrition does it provide?",
+    "reference_answer": "The smoothie uses one medium banana, 2 tablespoons of peanut butter, 1 cup of plain nonfat Greek yogurt, and 1 cup of 1% milk. It provides approximately 560 calories, 37 grams of protein, and 64 grams of carbohydrate.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Nutrition, High Cal-Pro_Education_sheet.pdf",
+        "page": 3
+      }
+    ]
+  },
+  {
+    "id": "fitness_006",
+    "question": "How is Double Strength Milk made, what does one cup provide, and how soon should it be used?",
+    "reference_answer": "Double Strength Milk is made with 4 cups of whole milk and 10 tablespoons of dry skim milk powder. One cup provides about 200 calories and 13 grams of protein, and it should be used within 48 hours.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Nutrition, High Cal-Pro_Education_sheet.pdf",
+        "page": 4
+      }
+    ]
+  },
+  {
+    "id": "fitness_007",
+    "question": "How does the sports nutrition performance meal wheel divide a balanced plate?",
+    "reference_answer": "It divides a balanced meal into one-third fuel foods, one-third recover foods, and one-third support foods, with a fluid source for hydration. Fuel foods are carbohydrates, recover foods provide protein and healthy fats, and support foods are fruit and vegetables.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Sports-Nutrition-Fundamentals-To-Improve-Performance-full-resource-v2.8.pdf",
+        "page": 11
+      }
+    ]
+  },
+  {
+    "id": "fitness_008",
+    "question": "How should daily carbohydrate intake change across low, moderate, high, and very high training loads?",
+    "reference_answer": "The sports nutrition guide recommends 3 to 5 grams per kilogram per day for a low training load, 5 to 7 for a moderate load, 6 to 10 for a high load, and 8 to 12 for a very high load. It recommends matching carbohydrate intake to the demands of each training or competition day.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Sports-Nutrition-Fundamentals-To-Improve-Performance-full-resource-v2.8.pdf",
+        "page": 12
+      }
+    ]
+  },
+  {
+    "id": "fitness_009",
+    "question": "What calcium intakes does the sports nutrition guide recommend for people aged 11 to 18 and 19 to 50?",
+    "reference_answer": "The guide gives UK recommendations of 800 milligrams per day for females aged 11 to 18, 1,000 milligrams per day for males aged 11 to 18, and 700 milligrams per day for both females and males aged 19 to 50.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Sports-Nutrition-Fundamentals-To-Improve-Performance-full-resource-v2.8.pdf",
+        "page": 33
+      }
+    ]
+  },
+  {
+    "id": "fitness_010",
+    "question": "What caffeine dose and timing does the sports nutrition guide describe for performance, and do higher doses improve the benefit?",
+    "reference_answer": "It describes 1 to 3 milligrams of caffeine per kilogram of body weight taken about 30 to 60 minutes before training, equivalent to about 70 to 200 milligrams for a 70-kilogram athlete. It says higher doses do not increase performance benefits and are likely to worsen negative side effects.",
+    "answerable": true,
+    "relevant_documents": [
+      {
+        "source": "Sports-Nutrition-Fundamentals-To-Improve-Performance-full-resource-v2.8.pdf",
+        "page": 41
+      }
+    ]
+  },
+  {
+    "id": "fitness_011",
+    "question": "What exact creatine loading and maintenance doses does the knowledge base recommend?",
+    "reference_answer": "The knowledge base does not provide a creatine loading or maintenance dosing protocol, so this question cannot be answered from the supplied documents.",
+    "answerable": false,
+    "relevant_documents": []
+  },
+  {
+    "id": "fitness_012",
+    "question": "What week-by-week exercise rehabilitation program does the knowledge base prescribe after ACL reconstruction?",
+    "reference_answer": "The knowledge base does not provide an ACL reconstruction rehabilitation program, so this question cannot be answered from the supplied documents.",
+    "answerable": false,
+    "relevant_documents": []
+  }
+]

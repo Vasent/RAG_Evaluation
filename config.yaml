@@ -13,12 +13,34 @@ vectordb:
 
 retrieval:
   top_k: 3
-  similarity_threshold: 0.7
+  # Retrieve extra candidates, then keep the best chunk from each unique page.
+  # FAISS returns a distance (lower is better), so no uncalibrated percentage
+  # threshold is applied here.
+  candidate_multiplier: 3
 
 llm:
   provider: "openai"
   model: "gpt-4.1-mini"
   temperature: 0.0
+
+evaluation:
+  enabled: true
+  judge_model: "gpt-4.1-mini"
+  max_source_chars: 1600
+  relevance_grade: 2
+  max_search_retries: 1
+  max_answer_retries: 1
+  benchmark_file: "data/evaluation_questions.json"
+  thresholds:
+    # Teaching defaults from the supplied evaluation slides. Calibrate these
+    # against your own benchmark before treating them as production gates.
+    precision_at_k: 0.8
+    reciprocal_rank: 0.8
+    ndcg_at_k: 0.8
+    grounding_percent: 80
+    supported_claims_percent: 90
+    hallucinated_claims_percent: 10
+    relevancy: 1
 
 app:
   log_level: "INFO"

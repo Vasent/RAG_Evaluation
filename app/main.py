@@ -37,6 +37,55 @@ def format_sources(sources):
     
     return "\n".join(formatted)
 
+
+def _score(value, percent=False):
+    """Format optional evaluation values without turning N/A into zero."""
+    if value is None:
+        return "N/A"
+    return f"{value:.1f}%" if percent else f"{value:.2f}"
+
+
+def print_evaluation(evaluation):
+    """Print the same compact quality summary exposed by the web UI."""
+    overall = evaluation.get("overall", {})
+    search = evaluation.get("search", {})
+    answer = evaluation.get("answer", {})
+
+    if overall.get("status") == "disabled":
+        print(f"{Fore.YELLOW}🛡️  Evaluation disabled{Style.RESET_ALL}\n")
+        return
+
+    status = overall.get("status", "needs_review")
+    colour = Fore.GREEN if status == "passed" else Fore.YELLOW
+    print(f"{Fore.CYAN}🧪 Evaluation:{Style.RESET_ALL}")
+    print(
+        f"{colour}{status.replace('_', ' ').title()}{Style.RESET_ALL} | "
+        f"search retries: {overall.get('search_retries', 0)} | "
+        f"answer retries: {overall.get('answer_retries', 0)}"
+    )
+
+    search_metrics = search.get("metrics", {})
+    if search_metrics:
+        print(
+            "Search — "
+            f"Precision@k {_score(search_metrics.get('precision_at_k'))}, "
+            f"RR {_score(search_metrics.get('reciprocal_rank'))}, "
+            f"AP@k {_score(search_metrics.get('average_precision_at_k'))}, "
+            f"NDCG@k {_score(search_metrics.get('ndcg_at_k'))}, "
+            f"Recall {_score(search_metrics.get('recall_at_k'))}"
+        )
+
+    answer_metrics = answer.get("metrics", {})
+    if answer_metrics:
+        print(
+            "Answer — "
+            f"Grounding {_score(answer_metrics.get('grounding_percent'), percent=True)}, "
+            f"Supported claims {_score(answer_metrics.get('supported_claims_percent'), percent=True)}, "
+            f"Hallucinated claims {_score(answer_metrics.get('hallucinated_claims_percent'), percent=True)}, "
+            f"Relevancy {answer_metrics.get('relevancy', 'N/A')}"
+        )
+    print()
+
 def main():
     """Main interactive loop"""
     print_banner()
@@ -80,6 +129,8 @@ def main():
             if result['sources']:
                 print(f"{Fore.CYAN}📚 Sources:{Style.RESET_ALL}")
                 print(f"{Fore.YELLOW}{format_sources(result['sources'])}{Style.RESET_ALL}\n")
+
+            print_evaluation(result.get("evaluation", {}))
         
         except Exception as e:
             print(f"{Fore.RED}❌ Error: {e}{Style.RESET_ALL}\n")

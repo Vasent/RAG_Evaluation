@@ -5,6 +5,7 @@ Supports: Token-based, Semantic, Agentic, and Recursive chunking
 import os
 import sys
 import yaml
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
@@ -134,6 +135,7 @@ class DocumentIngestion:
             print(f"{Fore.YELLOW}   ⚠️  Agentic chunking uses LLM - this may take longer and use API credits{Style.RESET_ALL}")
         
         chunks = self.text_splitter.split_documents(documents)
+        self._add_stable_chunk_ids(chunks)
         
         print(f"{Fore.GREEN}✅ Created {len(chunks)} chunks{Style.RESET_ALL}")
         chunk_sizes = [len(c.page_content) for c in chunks]
@@ -142,6 +144,31 @@ class DocumentIngestion:
         print(f"{Fore.YELLOW}   Max chunk size: {max(chunk_sizes)} characters{Style.RESET_ALL}\n")
         
         return chunks
+
+    @staticmethod
+    def _add_stable_chunk_ids(chunks: List[Document]) -> None:
+        """Add deterministic page and chunk identifiers used by evaluation labels."""
+        totals = Counter(
+            (chunk.metadata.get("source", "Unknown"), chunk.metadata.get("page", "N/A"))
+            for chunk in chunks
+        )
+        positions = defaultdict(int)
+
+        for chunk in chunks:
+            source = Path(str(chunk.metadata.get("source", "Unknown"))).name
+            page = chunk.metadata.get("page", "N/A")
+            key = (chunk.metadata.get("source", "Unknown"), page)
+            chunk_index = positions[key]
+            positions[key] += 1
+
+            document_id = f"{source}#page={page}"
+            chunk.metadata.update({
+                "source": source,
+                "document_id": document_id,
+                "chunk_id": f"{document_id}#chunk={chunk_index}",
+                "chunk_index": chunk_index,
+                "total_chunks": totals[key],
+            })
     
     def create_vectorstore(self, chunks: List[Document]):
         """Create and persist FAISS vectorstore"""
