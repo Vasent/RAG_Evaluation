@@ -18,7 +18,7 @@ langchain-openai==0.2.14      # For OpenAI API
 langchain-ollama==0.2.2       # For local Ollama
 
 # Configuration Management
-pyyaml==6.0.2
+pyyaml==6.0.3
 python-dotenv==1.0.1
 
 # Utilities
